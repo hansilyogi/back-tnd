@@ -8,17 +8,59 @@ var request = require('request-promise');
 // var moment = require('moment');
 const moment = require('moment-timezone');
 const mongoose = require("mongoose");
-// import xlsxFile from 'read-excel-file';
 
+//Youtube APIs
+const youtubeinfo = require("youtube-info");
+const videoid = require("get-video-id");
+const ytch = require('yt-channel-info')
+
+// import xlsxFile from 'read-excel-file';
 const xlsxFile = require('read-excel-file/node');
+var json2xls = require('json2xls');
+
+const filename = 'sample.xlsx';
+const allUsers = require('../TND_Buss_Cat.json');
+
+router.post("/getvideo",async function(req,res,next){
+    try {
+        // const channelId = 'UCIXa8rauMhji5euD25D9dfA'
+        const channelId = 'UCXuqSBlHAE6Xw-yeJA0Tunw'
+        const sortBy = 'last'
+
+        ytch.getChannelPlaylistInfo(channelId, sortBy).then((response) => {
+            // console.log(response)
+            res.status(200).json({ Data: response })
+           }).catch((err) => {
+            console.log(err)
+           })
+
+    } catch (error) {
+        res.status(500).json({ IsSuccess : false, Message : error.message});
+    }
+});
+
+router.post("/jsontoExcel", async function(req,res,next){
+    try {
+        var xls = json2xls(allUsers);
+        console.log(xls);
+        fs.writeFileSync(filename, xls, 'binary', (err) => {
+            if (err) {
+                console.log("writeFileSync :", err);
+            }
+        console.log( filename+" file is saved!");
+        });
+    } catch (error) {
+        res.status(500).json({ Message : error.message});
+    }
+});
 
 router.post("/delitem", async function(req,res,next){
     try{
-        var h = await directoryData.find({ email: "admin@gmail.com"});
+        var h = await offerSchema.find();
         console.log(h.length);
         for(let i=0;i<h.length; i++){
             // console.log(h[i]._id);
-            var y = await directoryData.findByIdAndDelete(h[i]._id);
+            var y = await offerSchema.findByIdAndDelete(h[i]._id);
         }
         res.status(200).json({Message : "Done"});
     }
@@ -30,9 +72,10 @@ router.post("/delitem", async function(req,res,next){
 router.post('/addmember', async function(req,res,next) {
     try {
         let dataIs = [];
-        xlsxFile('./excel_BNI/BNI_Elite 131.xlsx').then(async (rows) => {
+        xlsxFile('./excel_BNI/List of Automotive.xlsx').then(async (rows) => {
+            console.log(rows);
             console.log(rows.length);
-            
+
             // for(let i=0;i<rows.length;i++){
             //     let x = {
             //         "name" : rows[0],
@@ -42,19 +85,21 @@ router.post('/addmember', async function(req,res,next) {
             //     }
             //     console.log(x);
             // }
-            rows.forEach(async function(col) {
-                console.log(col);
+
+            rows.forEach(async function(col){
                 let addMember = await new directoryData({
                     name : col[0],
-                    mobile : col[6],
-                    email : "admin@gmail.com",
+                    mobile : col[3],
+                    memberOf : '5fc763fae47d7d695ca827fc',
+                    member_id : '5fc763fae47d7d695ca827fc',
+                    address : col[4],
+                    email : "xxxx@xxx.xxx",
                     company_name : col[1],
                 });
                 console.log(addMember);
                 await addMember.save();
-            })
-            
-        });   
+            });
+        });
         // res.status(200).json({ Data: dataIs }); 
     } catch (error) {
         res.status(500).json({ Message : error.message, IsSuccess : false});
@@ -62,7 +107,6 @@ router.post('/addmember', async function(req,res,next) {
      
     // res.send({x});
 });
-
 
 const cloudinary = require('cloudinary').v2;
 cloudinary.config({
@@ -87,6 +131,8 @@ var inquirySchema = require("../model/inquiryModel");
 var citySchema = require("../model/cityModel");
 var business_storiesCategorySchema = require('../model/business_stories_categoryModel');
 var bussModelSchema = require('../model/bus_storyModel');
+var ConnectionRequest = require("../model/connectionRequest");
+var eventRegisterSchema = require("../model/eventregisterModel");
 const { off, resource, all } = require('../app.js');
 const { time } = require('console');
 const { json } = require('body-parser');
@@ -267,6 +313,23 @@ router.post('/multiphoto', uploadNewsImg.array('newsImage'), async function(req,
     // console.log(d);
     res.send(fileinfo);
 });
+
+// router.post("/addimage",uploadNewsImg.array('newsImage'), async function(req,res,next){
+//     var fileinfo = req.files;
+//     console.log(fileinfo);
+//     const cloudinary = require('cloudinary').v2;
+//         cloudinary.config({
+//           cloud_name: 'drjn7o1c5',
+//           api_key: '421237682856166',
+//           api_secret: 'cwKT5UiMyloMl6KvFXWwxUZnnGk'
+//     });
+//     uniqname = moment().format('MMMM Do YYYY, h:mm:ss a');
+//     var c = await cloudinary.uploader.upload(fileinfo[0].path,{ public_id: `Demo/${uniqname}`, tags: `Demo` },function(err,result) {
+//         console.log("Error : ", err);
+//         console.log("Resilt : ", result);
+//         // d[j] = result.url;
+//     });
+// });
 
 router.post("/addNewsCategory" , uploadCategoryImg.single("categoryImage") , async function(req,res,next){
     const { newsType , newsDate , categoryImage } = req.body;
@@ -752,36 +815,62 @@ router.post("/updateToFeatured" , uploadCategoryImg.single() ,async function(req
     }
 });
 
-router.post("/addBusinessCategory" , uploadBusinessCategory.single("categoryImage") , async function(req,res,next){
+router.post("/addBusinessCategory" , uploadBusinessCategory.fields([{name:"categoryImage"},{name:"categoryIcon"}]) , async function(req,res,next){
     const { categoryName , categoryImage , dateTime } = req.body;
     const file = req.file;
-    if(req.file){
+    var d = [];
+    var e = [];
+    var fileimg = req.files.categoryImage;
+    var fileicon = req.files.categoryIcon;
+
+    if(req.files){
         const cloudinary = require('cloudinary').v2;
         cloudinary.config({
           cloud_name: 'dckj2yfap',
           api_key: '693332219167892',
           api_secret: 'acUf4mqnUBJCwsovIz-Ws894NGY'
         });
-        var path = req.file.path;
-        var uniqueFilename = new Date().toISOString();
+        // var path = req.file.path;
+        // var uniqueFilename = new Date().toISOString();
+
+        if(req.files.categoryImage){
+            var uniqvideo = "";
+            uniqvideo = moment().format('MMMM Do YYYY, h:mm:ss a');
+            var v = await cloudinary.uploader.upload(fileimg[0].path, { public_id: `blog/businessCategory/${uniqvideo}`, tags: `blog` },function(err,result) {
+            console.log("Error : ", err);
+            console.log("Resilt : ", result);
+            e[0] = result.url;
+            });
+        }
+
+        if(req.files.categoryIcon){
+            var uniqvideo = "";
+            uniqvideo = moment().format('MMMM Do YYYY, h:mm:ss a');
+            var v = await cloudinary.uploader.upload(fileicon[0].path, { public_id: `blog/businessCategory/${uniqvideo}`, tags: `blog` },function(err,result) {
+            console.log("Error : ", err);
+            console.log("Resilt : ", result);
+            d[0] = result.url;
+            });
+        }
        
-        cloudinary.uploader.upload(
-          path,
-          { public_id: `blog/businessCategory/${uniqueFilename}`, tags: `blog` }, // directory and tags are optional
-          function(err, image) {
-            if (err) return res.send(err)
+        // cloudinary.uploader.upload(
+        //   path,
+        //   { public_id: `blog/businessCategory/${uniqueFilename}`, tags: `blog` }, // directory and tags are optional
+        //   function(err, image) {
+        //     if (err) return res.send(err)
           
-            // remove file from server
-            const fs = require('fs');
-            fs.unlinkSync(path);
+        //     // remove file from server
+        //     const fs = require('fs');
+        //     fs.unlinkSync(path);
             
-          }
-        )
+        //   }
+        // )
       }
     try {
         var record = await new businessCategorySchema({
             categoryName: categoryName,
-            categoryImage: file == undefined ? "" : 'https://res.cloudinary.com/dckj2yfap/image/upload/v1601267438/blog/businessCategory/'+uniqueFilename,
+            categoryImage: req.files == undefined ? "" : e[0],
+            categoryIcon: req.files == undefined ? "" : d[0],
             dateTime: dateTime
         });
         if(record){
@@ -795,36 +884,44 @@ router.post("/addBusinessCategory" , uploadBusinessCategory.single("categoryImag
     }
 });
 
-router.post("/updateBusinessCategory" , uploadBusinessCategory.single("categoryImage") , async function(req,res,next){
+router.post("/updateBusinessCategory" , uploadBusinessCategory.fields([{name:"categoryImage"},{name:"categoryIcon"}]) , async function(req,res,next){
     const { categoryName , categoryId , dateTime } = req.body;
-    const file = req.file;
-    if(req.file){
-        const cloudinary = require('cloudinary').v2;
-        cloudinary.config({
-          cloud_name: 'dckj2yfap',
-          api_key: '693332219167892',
-          api_secret: 'acUf4mqnUBJCwsovIz-Ws894NGY'
-        });
-        var path = req.file.path;
-        var uniqueFilename = new Date().toISOString();
-       
-        cloudinary.uploader.upload(
-          path,
-          { public_id: `blog/businessCategory/${uniqueFilename}`, tags: `blog` }, // directory and tags are optional
-          function(err, image) {
-            if (err) return res.send(err)
-          
-            // remove file from server
-            const fs = require('fs');
-            fs.unlinkSync(path);
-            
-          }
-        )
-      }
+    var d = [];
+    var e = [];
+    var fileimg = req.files.categoryImage;
+    var fileicon = req.files.categoryIcon;
+    // if(req.files){
+    //     const cloudinary = require('cloudinary').v2;
+    //     cloudinary.config({
+    //       cloud_name: 'dckj2yfap',
+    //       api_key: '693332219167892',
+    //       api_secret: 'acUf4mqnUBJCwsovIz-Ws894NGY'
+    //     });
+
+    //     if(req.files.categoryImage){
+    //         var uniqvideo = "";
+    //         uniqvideo = moment().format('MMMM Do YYYY, h:mm:ss a');
+    //         var v = await cloudinary.uploader.upload(fileimg[0].path, { public_id: `blog/businessCategory/${uniqvideo}`, tags: `blog` },function(err,result) {
+    //         console.log("Error : ", err);
+    //         console.log("Resilt : ", result);
+    //         e[0] = result.url;
+    //         });
+    //     }
+
+    //     if(req.files.categoryIcon){
+    //         var uniqvideo = "";
+    //         uniqvideo = moment().format('MMMM Do YYYY, h:mm:ss a');
+    //         var v = await cloudinary.uploader.upload(fileicon[0].path, { public_id: `blog/businessCategory/${uniqvideo}`, tags: `blog` },function(err,result) {
+    //         console.log("Error : ", err);
+    //         console.log("Resilt : ", result);
+    //         d[0] = result.url;
+    //         });
+    //     }
+    // }
     try {
         let updateIs = {
             categoryName: categoryName,
-            categoryImage: file == undefined ? "" : 'https://res.cloudinary.com/dckj2yfap/image/upload/v1601267438/blog/businessCategory/'+uniqueFilename,
+            // categoryImage: file == undefined ? "" : 'https://res.cloudinary.com/dckj2yfap/image/upload/v1601267438/blog/businessCategory/'+uniqueFilename,
             dateTime: dateTime,
         }
         let record = await businessCategorySchema.find({ _id: categoryId });
@@ -956,7 +1053,7 @@ router.post("/getAllBanner" , async function(req,res,next){
 
 router.post("/offer" , uploadOfferbanner.single("bannerImage") , async function(req,res,next){
     const { title , bannerImage ,userId, businessCategory , dateTime , details ,redeemBy , 
-        offerExpire ,faceBook, mail , instagram , linkedIn , twitter , whatsApp , youTube  } = req.body;
+        offerExpire ,faceBook, mail , instagram , linkedIn , twitter , whatsApp , youTube,city  } = req.body;
     
     var expire = moment(offerExpire);
     expire = expire.utc().format('DD/MM/YYYY');
@@ -972,7 +1069,7 @@ router.post("/offer" , uploadOfferbanner.single("bannerImage") , async function(
     let date1 = new Date(initialDate);
     let date2 = new Date(expire);
 
-    var daysRemaining = Math.abs( date1.getDate() - date2.getDate() );
+    // var daysRemaining = Math.abs( date1.getDate() - date2.getDate() );
     // console.log(daysRemaining);
 
     if(req.file){
@@ -1010,7 +1107,7 @@ router.post("/offer" , uploadOfferbanner.single("bannerImage") , async function(
             dateTime: dateTime,
             offerExpire: offerExpire,
             businessCategory: businessCategory,
-            daysRemain: daysRemaining,
+            // daysRemain: daysRemaining,
             userId:userId,
             faceBook: faceBook,
             instagram: instagram,
@@ -1019,6 +1116,7 @@ router.post("/offer" , uploadOfferbanner.single("bannerImage") , async function(
             twitter: twitter,
             whatsApp: whatsApp,
             youTube: youTube,
+            city: city,
         });
         await record.save();
         if(record){
@@ -1044,6 +1142,9 @@ router.post("/getOfferOfBusiness" , async function(req,res,next){
         var record  = await offerSchema.find({ businessCategory : businessCategory_id })
                                        .populate({
                                            path: "businessCategory",
+                                       })
+                                       .populate({
+                                           path :"city",
                                        });
         // console.log(record);
         if(record){
@@ -1168,7 +1269,10 @@ router.post("/getOffer" , async function(req,res,next){
         var record = await offerSchema.find()
                                       .populate({
                                             path: "businessCategory",
-                                        });
+                                        })
+                                      .populate({
+                                          path:"city",
+                                      });
         if(record){
             res.status(200).json({ IsSuccess: true , Data: record , Message: "Offers Found" });
         }else{
@@ -1179,14 +1283,36 @@ router.post("/getOffer" , async function(req,res,next){
     }
 });
 
+router.post("/getusermultipleoffer", async function(req,res,next){
+    const userid = req.body.userid;
+    try{
+        let finduser = await directoryData.findById(userid)
+                                        .populate({
+                                            path: "businessCategory",
+                                        })
+                                        .populate({
+                                            path:"city",
+                                        });
+        // console.log(finduser._id);
+        let finduseroffer = await offerSchema.find({ userId : finduser._id});
+        res.send(finduseroffer);
+    }
+    catch(err){
+        res.status(500).json({ IsSuccess : false, Message : err.message });
+    }
+});
+
 router.post("/getOfferbyUser" , async function(req,res,next){
     const id = req.body.id;
-    console.log(id);
+    // console.log(id);
     try {
         var record = await offerSchema.find({userId : id})
                                       .populate({
                                             path: "businessCategory",
-                                        });
+                                        })
+                                      .populate({
+                                          path:"city",
+                                      });
         if(record){
             res.status(200).json({ IsSuccess: true , Data: record , Message: "Offers Found" });
         }else{

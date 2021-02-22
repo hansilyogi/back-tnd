@@ -58,12 +58,25 @@ app.use(function(req, res, next) {
 //   app.locals.collection = collection; 
 // });
 
-mongoose.connect('mongodb+srv://root:root@cluster0.s73xs.mongodb.net/test',{
-  useNewUrlParser : true,
-  useUnifiedTopology : true,
+mongoose.connect('mongodb+srv://root:root@cluster0.s73xs.mongodb.net/test', {
   useFindAndModify: false,
-  useCreateIndex: true, 
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useCreateIndex: true,
 });
+
+mongoose.connection
+.once("open", () => console.log("DB Connected"))
+.on("error", (error) => {
+  console.log("Error While Connecting With DB");
+});
+
+// mongoose.connect('mongodb+srv://root:root@cluster0.s73xs.mongodb.net/test',{
+//   useNewUrlParser : true,
+//   useUnifiedTopology : true,
+//   useFindAndModify: false,
+//   useCreateIndex: true,
+// });
 // mongoose.set('useCreateIndex', true);
 // error handler
 app.use(function(err, req, res, next) {

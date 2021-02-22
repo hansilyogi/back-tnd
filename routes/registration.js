@@ -80,40 +80,55 @@ router.post('/', async function(req, res, next) {
 });
 
 //add personal Information
-router.post("/updatePersonal" , uploadUserProfile.single("img") , async function(req,res,next){
+router.post("/updatePersonal" , uploadUserProfile.fields([{name:"img"},{name:"companylogo"}]) , async function(req,res,next){
   const { id , name , email , mobile , company_name,ismember ,company_website, referred_by , date_of_birth , gender, 
           address , spouse_name , spouse_birth_date , achievement ,
           number_of_child , memberOf, business_category, experience,keyword, about_business, 
           faceBook , instagram , linkedIn , twitter , whatsApp , youTube
         } = req.body;
         
-  const file = req.file;
-  if(req.file){
+  // const file = req.file;
+  var d = [];
+  var e = [];
+  var userimg = req.files.img;
+  var compicon = req.files.companylogo;
+  if(req.files){
     const cloudinary = require('cloudinary').v2;
     cloudinary.config({
       cloud_name: 'dckj2yfap',
       api_key: '693332219167892',
       api_secret: 'acUf4mqnUBJCwsovIz-Ws894NGY'
     });
-    var path = req.file.path;
-    var uniqueFilename = new Date().toISOString();
-    // console.log(path);
-    // console.log(uniqueFilename);
-    // console.log(req.body);
-    cloudinary.uploader.upload(
-      path,
-      { public_id: `blog/users/${uniqueFilename}`, tags: `blog` }, // directory and tags are optional
-      function(err, image) {
-        if (err) return res.send(err)
-        // console.log('file uploaded to Cloudinary');
-        // remove file from server
-        const fs = require('fs');
-        fs.unlinkSync(path);
-        // return image details
-        // var image_data = json(image);
-        // console.log(image_data);
-      }
-    )
+    
+    if(req.files.img){
+      var uniqvideo = "";
+      uniqvideo = moment().format('MMMM Do YYYY, h:mm:ss a');
+      var v = await cloudinary.uploader.upload(userimg[0].path, { public_id: `blog/users/${uniqvideo}`, tags: `blog` },function(err,result) {
+      console.log("Error : ", err);
+      console.log("Resilt : ", result);
+      e[0] = result.url;
+      });
+    }
+
+    if(req.files.companylogo){
+      var uniqvideo = "";
+      uniqvideo = moment().format('MMMM Do YYYY, h:mm:ss a');
+      var v = await cloudinary.uploader.upload(compicon[0].path, { public_id: `blog/users/${uniqvideo}`, tags: `blog` },function(err,result) {
+      console.log("Error : ", err);
+      console.log("Resilt : ", result);
+      d[0] = result.url;
+      });
+    }
+
+    // cloudinary.uploader.upload(
+    //   path,
+    //   { public_id: `blog/users/${uniqueFilename}`, tags: `blog` }, // directory and tags are optional
+    //   function(err, image) {
+    //     if (err) return res.send(err)
+    //     const fs = require('fs');
+    //     fs.unlinkSync(path);
+    //   }
+    // )
   }
   try {
     var update = {
@@ -121,6 +136,7 @@ router.post("/updatePersonal" , uploadUserProfile.single("img") , async function
       mobile : mobile,
       email : email,
       company_name : company_name,
+      companylogo : req.files == undefined ? "" : d[0],
       ismember : ismember == undefined ? false : ismember,
       referred_by : referred_by,
       date_of_birth: date_of_birth,
@@ -130,7 +146,7 @@ router.post("/updatePersonal" , uploadUserProfile.single("img") , async function
       spouse_birth_date: spouse_birth_date,
       achievement: achievement,
       number_of_child: number_of_child,
-      img: file == undefined ? "" : 'https://res.cloudinary.com/dckj2yfap/image/upload/v1601267438/blog/users/'+uniqueFilename,
+      img: req.files == undefined ? "" : e[0],
       memberOf: memberOf,
       business_category: business_category,
       member_id : memberOf,

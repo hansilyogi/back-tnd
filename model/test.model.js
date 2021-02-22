@@ -19,6 +19,10 @@ var newSchema = mongoose.Schema({
         type: String,
         default: "",
     },
+    companylogo : {
+        type:String,
+        default :"https://res.cloudinary.com/dckj2yfap/image/upload/v1610557322/blog/users/2021-01-13T17:02:02.133Z.jpg"
+    },
     refralcode : {
         type : String
     },
@@ -66,6 +70,7 @@ var newSchema = mongoose.Schema({
     memberOf : [{ 
         type: mongoose.Types.ObjectId,
         ref: "MemberShip", 
+        // default : mongoose.Types.ObjectId('5fc763fae47d7d695ca827fc'),
     }],
     member_id : [{
         type: mongoose.Types.ObjectId,
@@ -109,27 +114,27 @@ var newSchema = mongoose.Schema({
     },
     faceBook : {
         type: String,
-        default : "https://www.facebook.com/"
+        default : ""
     },
     instagram : {
         type: String,
-        default : "https://www.instagram.com/"
+        default : ""
     },
     linkedIn : {
         type: String,
-        default: "https://www.linkedin.com/"
+        default: ""
     },
     twitter : {
         type: String,
-        default: "https://twitter.com/"
+        default: ""
     },
     whatsApp : {
         type: String,
-        default: "https://www.whatsapp.com/"
+        default: ""
     },
     youTube : {
         type: String,
-        default: "https://www.youtube.com/"
+        default: ""
     },
 });
 

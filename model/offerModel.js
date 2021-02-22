@@ -10,6 +10,9 @@ const offerSchema = mongoose.Schema({
     userId : {
         type: mongoose.Types.ObjectId, ref: "UsersList",
     },
+    city :{
+        type: mongoose.Types.ObjectId, ref: "city",
+    },
     dateTime: {
         type: String,
     },
@@ -37,19 +40,19 @@ const offerSchema = mongoose.Schema({
     },
     faceBook : {
         type: String,
-        default : "https://www.facebook.com/"
+        default : ""
     },
     instagram : {
         type: String,
-        default : "https://www.instagram.com/"
+        default : ""
     },
     linkedIn : {
         type: String,
-        default: "https://www.linkedin.com/"
+        default: ""
     },
     twitter : {
         type: String,
-        default: "https://twitter.com/"
+        default: ""
     },
     whatsApp : {
         type: String,
@@ -57,11 +60,11 @@ const offerSchema = mongoose.Schema({
     },
     youTube : {
         type: String,
-        default: "https://www.youtube.com/"
+        default: ""
     },
     mail : {
         type : String,
-        default : "xyz@gmail.com",
+        default : "",
     }
 });
 
